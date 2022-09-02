@@ -14,6 +14,8 @@ require (
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
 
+require github.com/google/go-cmp v0.5.5
+
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

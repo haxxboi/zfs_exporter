@@ -16,7 +16,19 @@ var (
 type Client interface {
 	PoolNames() ([]string, error)
 	Pool(name string) Pool
+	PoolDisks() ([]PoolDisk, error)
 	Datasets(pool string, kind DatasetKind) Datasets
+}
+
+type PoolDisk struct {
+	Zpool          string
+	Vdev           string
+	Name           string
+	Kind           string
+	State          string
+	ReadErrors     int
+	WriteErrors    int
+	ChecksumErrors int
 }
 
 // Pool allows querying pool properties
@@ -60,6 +72,10 @@ func (z clientImpl) Pool(name string) Pool {
 
 func (z clientImpl) Datasets(pool string, kind DatasetKind) Datasets {
 	return newDatasetsImpl(pool, kind)
+}
+
+func (z clientImpl) PoolDisks() ([]PoolDisk, error) {
+	return poolDisks()
 }
 
 func execute(pool string, h handler, cmd string, args ...string) error {

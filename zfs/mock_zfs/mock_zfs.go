@@ -56,6 +56,14 @@ func (m *MockClient) Pool(name string) zfs.Pool {
 	return ret0
 }
 
+// Pool mocks base method.
+func (m *MockClient) PoolDisks() ([]zfs.PoolDisk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PoolDisks")
+	ret0, _ := ret[0].([]zfs.PoolDisk)
+	return ret0, nil
+}
+
 // Pool indicates an expected call of Pool.
 func (mr *MockClientMockRecorder) Pool(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
@@ -75,6 +83,12 @@ func (m *MockClient) PoolNames() ([]string, error) {
 func (mr *MockClientMockRecorder) PoolNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PoolNames", reflect.TypeOf((*MockClient)(nil).PoolNames))
+}
+
+// PoolDisks indicates an expected call of PoolDIsks
+func (mr *MockClientMockRecorder) PoolDisks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PoolDisks", reflect.TypeOf((*MockClient)(nil).PoolDisks))
 }
 
 // MockPool is a mock of Pool interface.

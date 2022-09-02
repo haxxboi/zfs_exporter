@@ -111,6 +111,7 @@ var (
 
 func init() {
 	registerCollector(`pool`, defaultEnabled, defaultPoolProps, newPoolCollector)
+	registerCollector(`pool-disks`, defaultEnabled, "", newPoolDiskCollector)
 }
 
 type poolCollector struct {
@@ -175,4 +176,105 @@ func (c *poolCollector) updatePoolMetrics(ch chan<- metric, pool string) error {
 
 func newPoolCollector(l log.Logger, c zfs.Client, props []string) (Collector, error) {
 	return &poolCollector{log: l, client: c, props: props}, nil
+}
+
+type poolDiskCollector struct {
+	log    log.Logger
+	client zfs.Client
+}
+
+var (
+	diskStatusDescName = prometheus.BuildFQName(namespace, `disk`, `status`)
+	diskStatusDesc     = prometheus.NewDesc(
+		diskStatusDescName,
+		`zfs_exporter: Disk status`,
+		[]string{`zpool`, `vdev`, `state`, `kind`, `disk`},
+		nil,
+	)
+
+	diskReadErrDescName = prometheus.BuildFQName(namespace, `disk`, `read_error`)
+	diskReadErrDesc     = prometheus.NewDesc(
+		diskReadErrDescName,
+		`zfs_exporter: Disk read errors`,
+		[]string{`zpool`, `vdev`, `state`, `kind`, `disk`},
+		nil,
+	)
+
+	diskWriteErrDescName = prometheus.BuildFQName(namespace, `disk`, `write_error`)
+	diskWriteErrDesc     = prometheus.NewDesc(
+		diskWriteErrDescName,
+		`zfs_exporter: Disk write errors`,
+		[]string{`zpool`, `vdev`, `state`, `kind`, `disk`},
+		nil,
+	)
+
+	diskChecksumErrDescName = prometheus.BuildFQName(namespace, `disk`, `checksum_error`)
+	diskChecksumErrDesc     = prometheus.NewDesc(
+		diskChecksumErrDescName,
+		`zfs_exporter: Disk checksum errors`,
+		[]string{`zpool`, `vdev`, `state`, `kind`, `disk`},
+		nil,
+	)
+)
+
+func (c *poolDiskCollector) describe(ch chan<- *prometheus.Desc) {
+	ch <- diskStatusDesc
+	ch <- diskReadErrDesc
+	ch <- diskWriteErrDesc
+	ch <- diskChecksumErrDesc
+}
+
+func (c *poolDiskCollector) update(ch chan<- metric, pools []string, excludes regexpCollection) error {
+	disks, err := c.client.PoolDisks()
+	if err != nil {
+		return err
+	}
+
+	for _, disk := range disks {
+		labelValues := []string{disk.Zpool, disk.Vdev, disk.State, disk.Kind, disk.Name}
+		ch <- metric{
+			name: "zfs_disk_status",
+			prometheus: prometheus.MustNewConstMetric(
+				diskStatusDesc,
+				prometheus.GaugeValue,
+				1.0,
+				labelValues...,
+			),
+		}
+		if disk.Kind != "spare" {
+			ch <- metric{
+				name: "zfs_disk_read_error",
+				prometheus: prometheus.MustNewConstMetric(
+					diskReadErrDesc,
+					prometheus.GaugeValue,
+					float64(disk.ReadErrors),
+					labelValues...,
+				),
+			}
+			ch <- metric{
+				name: "zfs_disk_write_error",
+				prometheus: prometheus.MustNewConstMetric(
+					diskWriteErrDesc,
+					prometheus.GaugeValue,
+					float64(disk.WriteErrors),
+					labelValues...,
+				),
+			}
+			ch <- metric{
+				name: "zfs_disk_checksum_error",
+				prometheus: prometheus.MustNewConstMetric(
+					diskChecksumErrDesc,
+					prometheus.GaugeValue,
+					float64(disk.ChecksumErrors),
+					labelValues...,
+				),
+			}
+		}
+	}
+
+	return nil
+}
+
+func newPoolDiskCollector(l log.Logger, c zfs.Client, _props []string) (Collector, error) {
+	return &poolDiskCollector{log: l, client: c}, nil
 }
